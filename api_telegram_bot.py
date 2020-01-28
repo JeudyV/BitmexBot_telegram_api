@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 from flask import Flask
@@ -12,33 +12,34 @@ from flask import request
 from datetime import datetime
 import sqlalchemy
 import json
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 api = Api(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:1234@localhost/bot_telegram_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:12345678@localhost/bot_telegram_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 db = SQLAlchemy(app)
+migrate = Migrate(app, db) # this
 
 class users(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    userID = db.Column(db.Integer, primary_key=True, autoincrement=True)
     apikey = db.Column(db.String(50), nullable=False)
     apisecret = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(50), nullable=False)
     status = db.Column(db.Boolean, default=0, nullable=False)
     created_at = sqlalchemy.Column(sqlalchemy.DateTime, default=lambda: datetime.utcnow())
     updated_at = sqlalchemy.Column(sqlalchemy.DateTime, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
-    addresses = db.relationship('Address', backref='users_', lazy=True)
     
 class lists_(db.Model):
     idlist = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    id_user = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    id_user = db.Column(db.Integer, db.ForeignKey('users.userID'), nullable=False)
     name_list = db.Column(db.String(50), nullable=False)
     created_at = sqlalchemy.Column(sqlalchemy.DateTime, default=lambda: datetime.utcnow())
     updated_at = sqlalchemy.Column(sqlalchemy.DateTime, default=lambda: datetime.utcnow(), onupdate=lambda: datetime.utcnow())
 
 
-# In[ ]:
+# In[2]:
 
 
 def create_user(jsonData):
@@ -168,15 +169,23 @@ def create_list(jsonData):
                 else:
                     bandera = True
             if bandera is True:
-                info_list = users(
+                info_list = lists_(
                     id_user = jsonData["id_user"],
                     name_list = jsonData["name_list"]
                 )
                 db.session.add(info_list)
                 db.session.commit()
+                print("Attached user to list")
                 return True
             else:
-                return False
+                info_list = lists_(
+                    id_user = jsonData["id_user"],
+                    name_list = jsonData["name_list"],
+                )
+                db.session.add(info_list)
+                db.session.commit()
+                print("Attached user to list 2")
+                return True
         except Exception as error:
             print(error)
             return False
@@ -204,16 +213,20 @@ def get_list():
 
 def get_list_by_id(jsonData):
     id = jsonData["idlist"]
-    l = lists_.query.filter_by(idlist=id).first()
+    l = lists_.query.filter_by(idlist=id).all()
     if l is None:
         return False
     else:
-        list_ = {
-            'idlist': l.idlist,
-            'id_user': l.id_user,
-            'name_list': l.name_list,
-        }
-        return json.dumps(list_)
+        all_lists = []
+        for list_element in l:
+            list_ = {
+                'idlist': list_element.idlist,
+                'id_user': list_element.id_user,
+                'name_list': list_element.name_list,
+            }
+            all_lists.append(json.dumps(list_))
+
+        return all_lists
     
 def update_list(jsonData):
     id = jsonData["idlist"]
@@ -236,7 +249,7 @@ def update_list(jsonData):
         return True
 
 
-# In[ ]:
+# In[3]:
 
 
 @app.route("/create_user", methods=['POST'])
@@ -303,4 +316,22 @@ def update_user_by_email_():
 
 if __name__ == "__main__":
     app.run()
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
 

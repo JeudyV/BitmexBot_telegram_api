@@ -34,7 +34,7 @@ updater.dispatcher.add_handler(CommandHandler('hello', hello))
 updater.dispatcher.add_handler(CommandHandler('start', start))
 
 echo_handler = MessageHandler(Filters.text, echo)
-v = echo_handler._dict_
+v = echo_handler.__dict__
 print(v)
 updater.dispatcher.add_handler(echo_handler)
 
